@@ -1,0 +1,8 @@
+chrome-profile/
+launch.log
+*.exe
+*.user
+*.suo
+.DS_Store
+Thumbs.db
+node_modules/

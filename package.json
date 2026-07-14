@@ -1,0 +1,12 @@
+{
+  "name": "russian-dictation",
+  "version": "1.0.0",
+  "private": false,
+  "type": "module",
+  "description": "Small Windows dictation app for Russian voice input using Chrome Web Speech API.",
+  "scripts": {
+    "start": "node server.mjs",
+    "launch": "powershell -NoProfile -ExecutionPolicy Bypass -File ./Launch-RussianDictation.ps1"
+  },
+  "license": "MIT"
+}
