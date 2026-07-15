@@ -34,14 +34,29 @@ function Get-ProcessByCommandLine {
 Write-LaunchLog 'Launch requested.'
 
 try {
-  $node = (Get-Command node.exe -ErrorAction Stop).Source
-  $chrome = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
+  $bundledNode = Join-Path $appDir 'runtime\node\node.exe'
+  if (Test-Path -LiteralPath $bundledNode) {
+    $node = $bundledNode
+  } else {
+    $node = (Get-Command node.exe -ErrorAction Stop).Source
+  }
   Write-LaunchLog "Node found at $node"
 
-  if (-not (Test-Path -LiteralPath $chrome)) {
-    throw "Chrome was not found at $chrome"
+  $browserCandidates = @(
+    (Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'),
+    (Join-Path ${env:ProgramFiles(x86)} 'Google\Chrome\Application\chrome.exe'),
+    (Join-Path $env:LOCALAPPDATA 'Google\Chrome\Application\chrome.exe'),
+    (Join-Path $env:ProgramFiles 'Microsoft\Edge\Application\msedge.exe'),
+    (Join-Path ${env:ProgramFiles(x86)} 'Microsoft\Edge\Application\msedge.exe'),
+    (Join-Path $env:LOCALAPPDATA 'Microsoft\Edge\Application\msedge.exe')
+  ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+
+  $browser = $browserCandidates | Select-Object -First 1
+  if (-not $browser) {
+    throw 'Chrome or Microsoft Edge was not found.'
   }
-  Write-LaunchLog "Chrome found at $chrome"
+  $browserName = [System.IO.Path]::GetFileNameWithoutExtension($browser)
+  Write-LaunchLog "Browser found at $browser"
 
   $serverProcess = Get-ProcessByCommandLine -Name 'node.exe' -Text $serverPath | Select-Object -First 1
   if ($null -eq $serverProcess) {
@@ -71,15 +86,15 @@ try {
 
   New-Item -ItemType Directory -Path $profilePath -Force | Out-Null
 
-  $chromeProcess = Get-ProcessByCommandLine -Name 'chrome.exe' -Text $profilePath | Select-Object -First 1
-  if ($null -eq $chromeProcess) {
-    Write-LaunchLog 'Starting Chrome app window.'
-    Start-Process -FilePath $chrome -ArgumentList @(
+  $browserProcess = Get-ProcessByCommandLine -Name "$browserName.exe" -Text $profilePath | Select-Object -First 1
+  if ($null -eq $browserProcess) {
+    Write-LaunchLog 'Starting browser app window.'
+    Start-Process -FilePath $browser -ArgumentList @(
       "--user-data-dir=$profilePath",
       '--use-fake-ui-for-media-stream',
       "--app=$url"
     )
-    Write-LaunchLog 'Chrome app window start requested.'
+    Write-LaunchLog 'Browser app window start requested.'
     exit 0
   }
 
@@ -93,20 +108,20 @@ public static class WindowFocus {
 '@
   Add-Type $signature -ErrorAction SilentlyContinue
 
-  $chromePids = @(Get-ProcessByCommandLine -Name 'chrome.exe' -Text $profilePath | Select-Object -ExpandProperty ProcessId)
-  $windows = Get-Process -Name chrome -ErrorAction SilentlyContinue |
-    Where-Object { $chromePids -contains $_.Id -and $_.MainWindowHandle -ne 0 }
+  $browserPids = @(Get-ProcessByCommandLine -Name "$browserName.exe" -Text $profilePath | Select-Object -ExpandProperty ProcessId)
+  $windows = Get-Process -Name $browserName -ErrorAction SilentlyContinue |
+    Where-Object { $browserPids -contains $_.Id -and $_.MainWindowHandle -ne 0 }
 
   $window = $windows | Select-Object -First 1
   if ($null -ne $window) {
-    Write-LaunchLog "Restoring existing Chrome app window. PID: $($window.Id)"
+    Write-LaunchLog "Restoring existing browser app window. PID: $($window.Id)"
     [void][WindowFocus]::ShowWindowAsync([intptr]$window.MainWindowHandle, 9)
     Start-Sleep -Milliseconds 150
     [void][WindowFocus]::SetForegroundWindow([intptr]$window.MainWindowHandle)
     Write-LaunchLog 'Existing Chrome app window restored.'
   } else {
-    Write-LaunchLog 'Chrome profile is running, but no app window was found. Starting a new window.'
-    Start-Process -FilePath $chrome -ArgumentList @(
+    Write-LaunchLog 'Browser profile is running, but no app window was found. Starting a new window.'
+    Start-Process -FilePath $browser -ArgumentList @(
       "--user-data-dir=$profilePath",
       '--use-fake-ui-for-media-stream',
       "--app=$url"

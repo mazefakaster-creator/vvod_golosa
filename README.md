@@ -5,9 +5,9 @@
 ## Что нужно
 
 - Windows
-- Node.js
-- Google Chrome
+- Google Chrome или Microsoft Edge
 - Микрофон
+- Интернет для распознавания речи
 
 ## Запуск
 
@@ -40,6 +40,16 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build-launcher.ps1
 ```
 
 Скрипт создаст `RussianDictation.exe`. Этот файл не добавляется в Git, потому что его можно собрать из `RussianDictationLauncher.cs`.
+
+## Переносимая версия
+
+Чтобы подготовить программу для другого компьютера, выполни на компьютере для сборки:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Build-Portable.ps1
+```
+
+Готовая папка и ZIP-архив появятся в `dist`. На другом компьютере распакуй архив и запусти `RussianDictation.exe`. Node.js отдельно устанавливать не потребуется.
 
 ## Загрузка на GitHub
 
